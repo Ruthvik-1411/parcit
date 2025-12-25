@@ -86,6 +86,14 @@ const DashboardScreen = () => {
     const item = links.find(l => l.id === id);
     if (!item) return;
     
+    // Toggle: If already scheduled, unschedule it
+    if (item.scheduledFor) {
+      setLinks(prev => prev.map(l => 
+        l.id === id ? { ...l, scheduledFor: null, status: 'unread' } : l
+      ));
+      return;
+    }
+    
     // Simulate deep linking to Google Calendar
     const title = encodeURIComponent(`Read: ${item.title}`);
     const details = encodeURIComponent(`Original URL: ${item.url}\n\nSummary: ${item.description || ''}`);
@@ -96,17 +104,20 @@ const DashboardScreen = () => {
 
     // Update state
     setLinks(prev => prev.map(l => l.id === id ? { ...l, scheduledFor: new Date().toISOString(), status: 'scheduled' } : l));
-    
-    // Simulate toast
-    Alert.alert("Opening Calendar...", "Please save the event in your calendar app.");
   };
 
   const handleMarkRead = (id: string) => {
       const item = links.find(l => l.id === id);
       if (!item) return;
       
-      setLinks(prev => prev.map(l => l.id === id ? { ...l, status: 'read' } : l));
-      Alert.alert("Marked as Read", `"${item.title}" has been marked as read.`);
+      // Toggle: If already read, mark as unread
+      if (item.status === 'read') {
+        setLinks(prev => prev.map(l => 
+          l.id === id ? { ...l, status: 'unread' } : l
+        ));
+      } else {
+        setLinks(prev => prev.map(l => l.id === id ? { ...l, status: 'read' } : l));
+      }
   };
 
   const handleDateFilter = () => {
