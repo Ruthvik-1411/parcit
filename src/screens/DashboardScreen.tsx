@@ -6,14 +6,37 @@ import LinkCard from '../components/LinkCard';
 import FilterBar from '../components/FilterBar';
 import SearchBar from '../components/SearchBar';
 import AddLinkModal from '../components/AddLinkModal';
-import { MOCK_LINKS, FILTER_CHIPS } from '../data/mockData';
+import DateFilterModal, { DateFilterOption } from '../components/DateFilterModal';
+import { MOCK_LINKS, FILTER_CHIPS, Link } from '../data/mockData';
 
 const DashboardScreen = () => {
   const theme = useTheme();
-  const [links, setLinks] = useState(MOCK_LINKS);
+  const [links, setLinks] = useState<Link[]>(MOCK_LINKS);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [isDateFilterVisible, setIsDateFilterVisible] = useState(false);
+  const [selectedDateFilter, setSelectedDateFilter] = useState<DateFilterOption>('all');
+
+  const getDateFilterRange = (filter: DateFilterOption): Date | null => {
+    const now = new Date();
+    switch (filter) {
+      case 'today':
+        const today = new Date(now);
+        today.setHours(0, 0, 0, 0);
+        return today;
+      case 'last7days':
+        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      case 'last30days':
+        return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      case 'last6months':
+        return new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+      case 'lastyear':
+        return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      default:
+        return null;
+    }
+  };
 
   const filteredLinks = useMemo(() => {
     return links.filter((link) => {
@@ -26,13 +49,17 @@ const DashboardScreen = () => {
         selectedFilter === 'all' || 
         link.tags.some(tag => tag.toLowerCase().includes(selectedFilter.toLowerCase().replace('#', '')));
 
-      return matchesSearch && matchesFilter;
-    });
-  }, [links, searchQuery, selectedFilter]);
+      // Date filter
+      const dateFilterRange = getDateFilterRange(selectedDateFilter);
+      const matchesDateFilter = !dateFilterRange || new Date(link.addedAt) >= dateFilterRange;
 
-  const handleAddLink = (url) => {
+      return matchesSearch && matchesFilter && matchesDateFilter;
+    });
+  }, [links, searchQuery, selectedFilter, selectedDateFilter]);
+
+  const handleAddLink = (url: string) => {
     // Simulate AI Enrichment
-    const newLink = {
+    const newLink: Link = {
       id: Date.now().toString(),
       url,
       title: 'New Enriched Link',
@@ -55,7 +82,18 @@ const DashboardScreen = () => {
     Alert.alert("Saved to Parcit", "Link enriched and added to your queue.");
   };
 
-  const handleSchedule = (item) => {
+  const handleSchedule = (id: string) => {
+    const item = links.find(l => l.id === id);
+    if (!item) return;
+    
+    // Toggle: If already scheduled, unschedule it
+    if (item.scheduledFor) {
+      setLinks(prev => prev.map(l => 
+        l.id === id ? { ...l, scheduledFor: null, status: 'unread' } : l
+      ));
+      return;
+    }
+    
     // Simulate deep linking to Google Calendar
     const title = encodeURIComponent(`Read: ${item.title}`);
     const details = encodeURIComponent(`Original URL: ${item.url}\n\nSummary: ${item.description || ''}`);
@@ -65,35 +103,25 @@ const DashboardScreen = () => {
     Linking.openURL(gCalUrl).catch(err => console.error("Couldn't load page", err));
 
     // Update state
-    setLinks(prev => prev.map(l => l.id === item.id ? { ...l, scheduledFor: new Date().toISOString(), status: 'scheduled' } : l));
-    
-    // Simulate toast
-    Alert.alert("Opening Calendar...", "Please save the event in your calendar app.");
+    setLinks(prev => prev.map(l => l.id === id ? { ...l, scheduledFor: new Date().toISOString(), status: 'scheduled' } : l));
   };
 
-  const handleMarkRead = (item) => {
-      setLinks(prev => prev.map(l => l.id === item.id ? { ...l, status: 'read' } : l));
-      Alert.alert("Marked as Read", `"${item.title}" has been marked as read.`);
-  };
-
-  const handleArchive = (item) => {
-      Alert.alert(
-          "Archive", 
-          "Are you sure you want to archive this link?",
-          [
-              { text: "Cancel", style: "cancel" },
-              { 
-                  text: "Archive", 
-                  onPress: () => {
-                      setLinks(links.filter(l => l.id !== item.id));
-                  }
-              }
-          ]
-      );
+  const handleMarkRead = (id: string) => {
+      const item = links.find(l => l.id === id);
+      if (!item) return;
+      
+      // Toggle: If already read, mark as unread
+      if (item.status === 'read') {
+        setLinks(prev => prev.map(l => 
+          l.id === id ? { ...l, status: 'unread' } : l
+        ));
+      } else {
+        setLinks(prev => prev.map(l => l.id === id ? { ...l, status: 'read' } : l));
+      }
   };
 
   const handleDateFilter = () => {
-      Alert.alert("Date Filter", "Date range picker would open here.");
+      setIsDateFilterVisible(true);
   };
 
   return (
@@ -106,6 +134,7 @@ const DashboardScreen = () => {
         value={searchQuery} 
         onChangeText={setSearchQuery} 
         onFilterPress={handleDateFilter}
+        isFilterActive={selectedDateFilter !== 'all'}
       />
       <FilterBar 
         filters={FILTER_CHIPS} 
@@ -121,7 +150,6 @@ const DashboardScreen = () => {
             item={item} 
             onSchedule={handleSchedule}
             onMarkRead={handleMarkRead}
-            onArchive={handleArchive}
           />
         )}
         contentContainerStyle={styles.listContent}
@@ -145,6 +173,13 @@ const DashboardScreen = () => {
         visible={isAddModalVisible}
         onDismiss={() => setIsAddModalVisible(false)}
         onSave={handleAddLink}
+      />
+
+      <DateFilterModal
+        visible={isDateFilterVisible}
+        onDismiss={() => setIsDateFilterVisible(false)}
+        selectedFilter={selectedDateFilter}
+        onSelectFilter={setSelectedDateFilter}
       />
     </SafeAreaView>
   );

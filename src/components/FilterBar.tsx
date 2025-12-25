@@ -1,7 +1,18 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Chip, useTheme } from 'react-native-paper';
 
-const FilterBar = ({ filters, selectedFilter, onSelectFilter }) => {
+interface Filter {
+  id: string;
+  label: string;
+}
+
+interface FilterBarProps {
+  filters: Filter[];
+  selectedFilter: string;
+  onSelectFilter: (id: string) => void;
+}
+
+const FilterBar = ({ filters, selectedFilter, onSelectFilter }: FilterBarProps) => {
   const theme = useTheme();
 
   return (

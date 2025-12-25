@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Modal, Portal, Text, TextInput, Button, IconButton, useTheme } from 'react-native-paper';
 
-const AddLinkModal = ({ visible, onDismiss, onSave }) => {
+interface AddLinkModalProps {
+  visible: boolean;
+  onDismiss: () => void;
+  onSave: (url: string) => void;
+}
+
+const AddLinkModal = ({ visible, onDismiss, onSave }: AddLinkModalProps) => {
   const [url, setUrl] = useState('');
   const theme = useTheme();
 

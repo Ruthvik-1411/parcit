@@ -1,12 +1,63 @@
-import { View, StyleSheet, Linking } from 'react-native';
+import { View, StyleSheet, Linking, Animated, PanResponder } from 'react-native';
 import { Card, Text, Chip, Button, IconButton, useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Link } from '../data/mockData';
+import { useRef } from 'react';
 
-const LinkCard = ({ item, onSchedule, onMarkRead, onArchive }) => {
+interface LinkCardProps {
+  item: Link;
+  onSchedule: (id: string) => void;
+  onMarkRead: (id: string) => void;
+}
+
+const LinkCard = ({ item, onSchedule, onMarkRead }: LinkCardProps) => {
   const theme = useTheme();
   const isScheduled = !!item.scheduledFor;
+  const translateX = useRef(new Animated.Value(0)).current;
 
-  const getIcon = (type) => {
+  const SWIPE_THRESHOLD = 80;
+  const MAX_SWIPE = 120;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only activate swipe if horizontal movement is significant
+        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      },
+      onPanResponderMove: (_, gestureState) => {
+        // Limit swipe distance
+        const clampedDx = Math.max(-MAX_SWIPE, Math.min(MAX_SWIPE, gestureState.dx));
+        translateX.setValue(clampedDx);
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx > SWIPE_THRESHOLD) {
+          // Right swipe - Mark as Read
+          Animated.timing(translateX, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => onMarkRead(item.id));
+        } else if (gestureState.dx < -SWIPE_THRESHOLD) {
+          // Left swipe - Schedule
+          Animated.timing(translateX, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => onSchedule(item.id));
+        } else {
+          // Snap back if threshold not met
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            friction: 8,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  const getIcon = (type: Link['type']) => {
     switch (type) {
       case 'github':
         return 'github';
@@ -33,7 +84,30 @@ const LinkCard = ({ item, onSchedule, onMarkRead, onArchive }) => {
   };
 
   return (
-    <Card style={styles.card} mode="elevated" elevation={1}>
+    <View style={styles.cardContainer}>
+      {/* Background swipe indicators */}
+      <View style={styles.swipeBackground}>
+        <View style={[styles.swipeAction, styles.swipeActionRight]}>
+          <MaterialCommunityIcons name="check-circle" size={24} color="#0D9488" />
+          <Text style={[styles.swipeText, { color: '#0D9488' }]}>Mark Read</Text>
+        </View>
+        <View style={[styles.swipeAction, styles.swipeActionLeft]}>
+          <Text style={[styles.swipeText, { color: theme.colors.primary }]}>Schedule</Text>
+          <MaterialCommunityIcons name="calendar-plus" size={24} color={theme.colors.primary} />
+        </View>
+      </View>
+
+      {/* Swipeable Card */}
+      <Animated.View
+        style={[
+          styles.animatedCard,
+          {
+            transform: [{ translateX }],
+          },
+        ]}
+        {...panResponder.panHandlers}
+      >
+        <Card style={styles.card} mode="elevated" elevation={1}>
       <Card.Content>
         <View style={styles.header}>
           <View style={styles.sourceContainer}>
@@ -85,20 +159,21 @@ const LinkCard = ({ item, onSchedule, onMarkRead, onArchive }) => {
       </Card.Content>
       
       <Card.Actions style={styles.actions}>
+        {/* TODO: Make schedule button better styled */}
         <View style={styles.actionGroup}>
           <Button 
               mode={isScheduled ? "contained" : "outlined"} 
               icon={isScheduled ? "calendar-check" : "calendar"} 
-              onPress={() => onSchedule(item)}
+              onPress={() => onSchedule(item.id)}
               style={styles.scheduleButton}
               contentStyle={styles.scheduleButtonContent}
-              disabled={isScheduled}
+              labelStyle={styles.scheduleButtonLabel}
           >
             {isScheduled ? "Scheduled" : "Schedule"}
           </Button>
           <IconButton 
             icon="open-in-new" 
-            size={20} 
+            size={17} 
             onPress={() => Linking.openURL(item.url)} 
             style={styles.iconButton}
           />
@@ -107,24 +182,59 @@ const LinkCard = ({ item, onSchedule, onMarkRead, onArchive }) => {
         <View style={styles.actionGroup}>
           <IconButton 
             icon="check" 
-            size={20} 
-            onPress={() => onMarkRead(item)} 
-            iconColor={theme.colors.primary}
-          />
-          <IconButton 
-            icon="archive-outline" 
-            size={20} 
-            onPress={() => onArchive(item)} 
+            size={14}
+            mode="outlined"
+            onPress={() => onMarkRead(item.id)} 
+            iconColor={item.status === 'read' ? 'white' : theme.colors.primary}
+            containerColor={item.status === 'read' ? '#0D9488' : undefined}
+            rippleColor={"#0D9488"}
+            style={{borderRadius: 999}}
           />
         </View>
       </Card.Actions>
     </Card>
+      </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  card: {
+  cardContainer: {
     marginBottom: 16,
+    position: 'relative',
+  },
+  swipeBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    backgroundColor: '#f5f5f5',
+  },
+  swipeAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  swipeActionRight: {
+    paddingLeft: 8,
+  },
+  swipeActionLeft: {
+    paddingRight: 8,
+  },
+  swipeText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  animatedCard: {
+    width: '100%',
+  },
+  card: {
     backgroundColor: '#fff',
     borderRadius: 16,
   },
@@ -192,12 +302,20 @@ const styles = StyleSheet.create({
   scheduleButton: {
       borderColor: '#e0e0e0',
       marginRight: 0,
+      borderRadius: 8,
   },
   scheduleButtonContent: {
       height: 36,
+      width: 120,
+      paddingHorizontal: 0,
+  },
+  scheduleButtonLabel: {
+      fontSize: 14,
+      bottom: 2
   },
   iconButton: {
     margin: 0,
+    borderRadius: 999
   }
 });
 
