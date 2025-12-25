@@ -1,13 +1,16 @@
 import { StyleSheet, View } from 'react-native';
-import { Searchbar, IconButton } from 'react-native-paper';
+import { Searchbar, IconButton, Badge, useTheme } from 'react-native-paper';
 
 interface SearchBarProps {
   value: string;
   onChangeText: (text: string) => void;
   onFilterPress: () => void;
+  isFilterActive?: boolean;
 }
 
-const SearchBar = ({ value, onChangeText, onFilterPress }: SearchBarProps) => {
+const SearchBar = ({ value, onChangeText, onFilterPress, isFilterActive = false }: SearchBarProps) => {
+  const theme = useTheme();
+  
   return (
     <View style={styles.container}>
       <Searchbar
@@ -18,11 +21,17 @@ const SearchBar = ({ value, onChangeText, onFilterPress }: SearchBarProps) => {
         inputStyle={styles.input}
         elevation={0} // Flat look as per wireframe
       />
-      <IconButton 
-        icon="calendar-search" 
-        onPress={onFilterPress} 
-        style={styles.filterBtn} 
-      />
+      <View>
+        <IconButton 
+          icon="calendar-search" 
+          onPress={onFilterPress} 
+          style={styles.filterBtn}
+          iconColor={isFilterActive ? theme.colors.primary : undefined}
+        />
+        {isFilterActive && (
+          <Badge size={8} style={[styles.badge, { backgroundColor: theme.colors.primary }]} />
+        )}
+      </View>
     </View>
   );
 };
@@ -47,7 +56,12 @@ const styles = StyleSheet.create({
   },
   filterBtn: {
     margin: 0,
-  }
+  },
+  badge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
 });
 
 export default SearchBar;

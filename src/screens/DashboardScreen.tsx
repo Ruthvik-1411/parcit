@@ -6,6 +6,7 @@ import LinkCard from '../components/LinkCard';
 import FilterBar from '../components/FilterBar';
 import SearchBar from '../components/SearchBar';
 import AddLinkModal from '../components/AddLinkModal';
+import DateFilterModal, { DateFilterOption } from '../components/DateFilterModal';
 import { MOCK_LINKS, FILTER_CHIPS, Link } from '../data/mockData';
 
 const DashboardScreen = () => {
@@ -14,6 +15,28 @@ const DashboardScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [isDateFilterVisible, setIsDateFilterVisible] = useState(false);
+  const [selectedDateFilter, setSelectedDateFilter] = useState<DateFilterOption>('all');
+
+  const getDateFilterRange = (filter: DateFilterOption): Date | null => {
+    const now = new Date();
+    switch (filter) {
+      case 'today':
+        const today = new Date(now);
+        today.setHours(0, 0, 0, 0);
+        return today;
+      case 'last7days':
+        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      case 'last30days':
+        return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      case 'last6months':
+        return new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+      case 'lastyear':
+        return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      default:
+        return null;
+    }
+  };
 
   const filteredLinks = useMemo(() => {
     return links.filter((link) => {
@@ -26,9 +49,13 @@ const DashboardScreen = () => {
         selectedFilter === 'all' || 
         link.tags.some(tag => tag.toLowerCase().includes(selectedFilter.toLowerCase().replace('#', '')));
 
-      return matchesSearch && matchesFilter;
+      // Date filter
+      const dateFilterRange = getDateFilterRange(selectedDateFilter);
+      const matchesDateFilter = !dateFilterRange || new Date(link.addedAt) >= dateFilterRange;
+
+      return matchesSearch && matchesFilter && matchesDateFilter;
     });
-  }, [links, searchQuery, selectedFilter]);
+  }, [links, searchQuery, selectedFilter, selectedDateFilter]);
 
   const handleAddLink = (url: string) => {
     // Simulate AI Enrichment
@@ -83,7 +110,7 @@ const DashboardScreen = () => {
   };
 
   const handleDateFilter = () => {
-      Alert.alert("Date Filter", "Date range picker would open here.");
+      setIsDateFilterVisible(true);
   };
 
   return (
@@ -96,6 +123,7 @@ const DashboardScreen = () => {
         value={searchQuery} 
         onChangeText={setSearchQuery} 
         onFilterPress={handleDateFilter}
+        isFilterActive={selectedDateFilter !== 'all'}
       />
       <FilterBar 
         filters={FILTER_CHIPS} 
@@ -134,6 +162,13 @@ const DashboardScreen = () => {
         visible={isAddModalVisible}
         onDismiss={() => setIsAddModalVisible(false)}
         onSave={handleAddLink}
+      />
+
+      <DateFilterModal
+        visible={isDateFilterVisible}
+        onDismiss={() => setIsDateFilterVisible(false)}
+        selectedFilter={selectedDateFilter}
+        onSelectFilter={setSelectedDateFilter}
       />
     </SafeAreaView>
   );
