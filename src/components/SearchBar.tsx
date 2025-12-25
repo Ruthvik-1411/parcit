@@ -1,7 +1,13 @@
 import { StyleSheet, View } from 'react-native';
 import { Searchbar, IconButton } from 'react-native-paper';
 
-const SearchBar = ({ value, onChangeText, onFilterPress }) => {
+interface SearchBarProps {
+  value: string;
+  onChangeText: (text: string) => void;
+  onFilterPress: () => void;
+}
+
+const SearchBar = ({ value, onChangeText, onFilterPress }: SearchBarProps) => {
   return (
     <View style={styles.container}>
       <Searchbar

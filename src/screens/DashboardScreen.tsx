@@ -6,11 +6,11 @@ import LinkCard from '../components/LinkCard';
 import FilterBar from '../components/FilterBar';
 import SearchBar from '../components/SearchBar';
 import AddLinkModal from '../components/AddLinkModal';
-import { MOCK_LINKS, FILTER_CHIPS } from '../data/mockData';
+import { MOCK_LINKS, FILTER_CHIPS, Link } from '../data/mockData';
 
 const DashboardScreen = () => {
   const theme = useTheme();
-  const [links, setLinks] = useState(MOCK_LINKS);
+  const [links, setLinks] = useState<Link[]>(MOCK_LINKS);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
@@ -30,9 +30,9 @@ const DashboardScreen = () => {
     });
   }, [links, searchQuery, selectedFilter]);
 
-  const handleAddLink = (url) => {
+  const handleAddLink = (url: string) => {
     // Simulate AI Enrichment
-    const newLink = {
+    const newLink: Link = {
       id: Date.now().toString(),
       url,
       title: 'New Enriched Link',
@@ -55,7 +55,10 @@ const DashboardScreen = () => {
     Alert.alert("Saved to Parcit", "Link enriched and added to your queue.");
   };
 
-  const handleSchedule = (item) => {
+  const handleSchedule = (id: string) => {
+    const item = links.find(l => l.id === id);
+    if (!item) return;
+    
     // Simulate deep linking to Google Calendar
     const title = encodeURIComponent(`Read: ${item.title}`);
     const details = encodeURIComponent(`Original URL: ${item.url}\n\nSummary: ${item.description || ''}`);
@@ -65,31 +68,18 @@ const DashboardScreen = () => {
     Linking.openURL(gCalUrl).catch(err => console.error("Couldn't load page", err));
 
     // Update state
-    setLinks(prev => prev.map(l => l.id === item.id ? { ...l, scheduledFor: new Date().toISOString(), status: 'scheduled' } : l));
+    setLinks(prev => prev.map(l => l.id === id ? { ...l, scheduledFor: new Date().toISOString(), status: 'scheduled' } : l));
     
     // Simulate toast
     Alert.alert("Opening Calendar...", "Please save the event in your calendar app.");
   };
 
-  const handleMarkRead = (item) => {
-      setLinks(prev => prev.map(l => l.id === item.id ? { ...l, status: 'read' } : l));
+  const handleMarkRead = (id: string) => {
+      const item = links.find(l => l.id === id);
+      if (!item) return;
+      
+      setLinks(prev => prev.map(l => l.id === id ? { ...l, status: 'read' } : l));
       Alert.alert("Marked as Read", `"${item.title}" has been marked as read.`);
-  };
-
-  const handleArchive = (item) => {
-      Alert.alert(
-          "Archive", 
-          "Are you sure you want to archive this link?",
-          [
-              { text: "Cancel", style: "cancel" },
-              { 
-                  text: "Archive", 
-                  onPress: () => {
-                      setLinks(links.filter(l => l.id !== item.id));
-                  }
-              }
-          ]
-      );
   };
 
   const handleDateFilter = () => {
@@ -121,7 +111,6 @@ const DashboardScreen = () => {
             item={item} 
             onSchedule={handleSchedule}
             onMarkRead={handleMarkRead}
-            onArchive={handleArchive}
           />
         )}
         contentContainerStyle={styles.listContent}

@@ -1,4 +1,24 @@
-export const MOCK_LINKS = [
+export interface Link {
+  id: string;
+  url: string;
+  title: string;
+  description: string;
+  type: 'github' | 'arxiv' | 'linkedin' | 'web' | 'other';
+  source: string;
+  tags: string[];
+  metadata: {
+    stars?: string;
+    language?: string;
+    readTime?: string;
+    authors?: string;
+    author?: string;
+  };
+  addedAt: string;
+  status: 'unread' | 'scheduled' | 'archived' | 'read';
+  scheduledFor: string | null;
+}
+
+export const MOCK_LINKS: Link[] = [
   {
     id: '1',
     url: 'https://github.com/facebook/react',

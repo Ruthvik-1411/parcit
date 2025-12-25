@@ -1,12 +1,19 @@
 import { View, StyleSheet, Linking } from 'react-native';
 import { Card, Text, Chip, Button, IconButton, useTheme } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Link } from '../data/mockData';
 
-const LinkCard = ({ item, onSchedule, onMarkRead, onArchive }) => {
+interface LinkCardProps {
+  item: Link;
+  onSchedule: (id: string) => void;
+  onMarkRead: (id: string) => void;
+}
+
+const LinkCard = ({ item, onSchedule, onMarkRead }: LinkCardProps) => {
   const theme = useTheme();
   const isScheduled = !!item.scheduledFor;
 
-  const getIcon = (type) => {
+  const getIcon = (type: Link['type']) => {
     switch (type) {
       case 'github':
         return 'github';
@@ -85,20 +92,21 @@ const LinkCard = ({ item, onSchedule, onMarkRead, onArchive }) => {
       </Card.Content>
       
       <Card.Actions style={styles.actions}>
+        {/* TODO: Make schedule button better styled */}
         <View style={styles.actionGroup}>
           <Button 
               mode={isScheduled ? "contained" : "outlined"} 
               icon={isScheduled ? "calendar-check" : "calendar"} 
-              onPress={() => onSchedule(item)}
+              onPress={() => onSchedule(item.id)}
               style={styles.scheduleButton}
               contentStyle={styles.scheduleButtonContent}
-              disabled={isScheduled}
+              labelStyle={styles.scheduleButtonLabel}
           >
             {isScheduled ? "Scheduled" : "Schedule"}
           </Button>
           <IconButton 
             icon="open-in-new" 
-            size={20} 
+            size={17} 
             onPress={() => Linking.openURL(item.url)} 
             style={styles.iconButton}
           />
@@ -107,14 +115,13 @@ const LinkCard = ({ item, onSchedule, onMarkRead, onArchive }) => {
         <View style={styles.actionGroup}>
           <IconButton 
             icon="check" 
-            size={20} 
-            onPress={() => onMarkRead(item)} 
-            iconColor={theme.colors.primary}
-          />
-          <IconButton 
-            icon="archive-outline" 
-            size={20} 
-            onPress={() => onArchive(item)} 
+            size={14}
+            mode="outlined"
+            onPress={() => onMarkRead(item.id)} 
+            iconColor={item.status === 'read' ? 'white' : theme.colors.primary}
+            containerColor={item.status === 'read' ? '#0D9488' : undefined}
+            rippleColor={"#0D9488"}
+            style={{borderRadius: 999}}
           />
         </View>
       </Card.Actions>
@@ -192,12 +199,20 @@ const styles = StyleSheet.create({
   scheduleButton: {
       borderColor: '#e0e0e0',
       marginRight: 0,
+      borderRadius: 8,
   },
   scheduleButtonContent: {
       height: 36,
+      width: 120,
+      paddingHorizontal: 0,
+  },
+  scheduleButtonLabel: {
+      fontSize: 14,
+      bottom: 2
   },
   iconButton: {
     margin: 0,
+    borderRadius: 999
   }
 });
 
