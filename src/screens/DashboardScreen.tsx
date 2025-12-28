@@ -9,8 +9,28 @@ import AddLinkModal from '../components/AddLinkModal';
 import DateFilterModal, { DateFilterOption } from '../components/DateFilterModal';
 import { MOCK_LINKS, FILTER_CHIPS, Link } from '../data/mockData';
 
+import { generateResponse } from '../ai';
+
 const DashboardScreen = () => {
   const theme = useTheme();
+
+  // For testing AI integration
+  React.useEffect(() => {
+    const testLlm = async () => {
+      try {
+        const result = await generateResponse(
+          "Generate a title, description and tags for the following link: https://github.com/resemble-ai/chatterbox." +
+          "Title should be short/crisp. The description should be concise and informative like tldr in 1-2 sentences max. Provide max 3 relevant tags."
+        );
+        console.log(result);
+      } catch (error) {
+        console.error("AI Generation failed:", error);
+      }
+    };
+
+    testLlm();
+  }, []);
+
   const [links, setLinks] = useState<Link[]>(MOCK_LINKS);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
